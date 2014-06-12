@@ -1,0 +1,54 @@
+<h1 id="lua-assign-find-the-best-way-of-assigning-jobs-to-persons.">lua-assign: Find the best way of assigning jobs to persons.</h1>
+<h2 id="installation">Installation</h2>
+<p>Copy <code>lua-assign.lua</code> to somewhere in <code>package.path</code>.</p>
+<h2 id="testing">Testing</h2>
+<p>While in the directory into which you cloned the repository, run <code>lua test-assign.lua</code>.</p>
+<h2 id="usage">Usage:</h2>
+<pre><code>assign = require &quot;lua-assign&quot;
+task, skill = assign(scores[,option])</code></pre>
+<p><code>scores</code>: A table with pairs <code>job,shortlist</code>, where <code>shortlist</code> is a table with pairs <code>person,score</code>, and <code>score</code> is a number. Numbers should be such that no precision is lost in addition, e.g. integers not too close to overflowing.</p>
+<p><code>task</code>: A table with pairs <code>person,job</code> where <code>person</code> is a key in <code>scores[job]</code> and each key in <code>scores</code> appears as <code>job</code> exactly once. If such an assignment does not exist, <code>nil</code> is returned unless <code>option</code> is given. The total of <code>scores[job][person]</code> over the pairs in <code>task</code> is a maximum. The table <code>task</code> has a metatable, see below.</p>
+<p><code>skill</code>: A table of numbers whose keys all appear in <code>task</code>, needed when calling <code>task</code>. If <code>task==nil</code>, <code>skill</code> is a message.</p>
+<p><code>option</code>:</p>
+<ol style="list-style-type: decimal">
+<li><code>assign(scores,&quot;partial&quot;)</code> returns the most complete partial assignment that could be found. The returned values are maximal over the jobs actually assigned, not over all choices of jobs.</li>
+<li><code>assign(scores,low)</code> means that every person who appears in any shortlist is treated as if on other shortlists too, with score <code>low</code>. The returned assignment may include pairs <code>person,job</code> for which <code>scores[job][person]</code> is nil.</li>
+<li><code>assign(scores,&quot;employ&quot;)</code> acts like <code>assign(scores,low)</code>, but <code>low</code> is calculated such that as many jobs as possible are assigned. Unlike <code>assign(scores,&quot;partial&quot;)</code>, the assignment is maximal over all assignments that assign that number of jobs. The downside is that <code>assign(scores,&quot;employ&quot;)</code> fills up the shortlists. If the original shortlists are sparse, <code>assign(scores,&quot;partial&quot;)</code> is much faster.</li>
+</ol>
+<h3 id="metamethods-of-task">metamethods of <code>task</code>:</h3>
+<ul>
+<li><code>__len</code>: <code>#task</code> returns the actual number of keys in <code>task</code>.</li>
+<li><p><code>__call</code>: <code>total, bound = task(scores,skill)</code> returns the total score<br /> of the assignment <code>task</code> and an upper bound based on <code>skill</code>. These<br /> are equal for the values returned by <code>assign(score)</code>, but not necessarily for the values returned by <code>assign(score,option)</code>. You can calculate <code>total,bound</code> for other inputs as follows:</p>
+<pre><code>evaluate = getmetamethod(assign{}).__call
+total, bound = evaluate(task,scores,skill)</code></pre>
+<p>If your input is invalid, <code>nil,message</code> is returned.</p></li>
+</ul>
+<h2 id="the-fine-print">The fine print</h2>
+<p>Several of the loops use <code>pairs</code>, and some things are therefore not reproducible over different runs with the same data.</p>
+<ol style="list-style-type: decimal">
+<li>If the maximal assignment is not unique, any maximal assignment may be returned.</li>
+<li>In the case of <code>assign(scores,&quot;partial&quot;)</code>, the subset of jobs assigned is maximal in the sense that no jobs can be added to it without making the assignment impossible, and the total is maximal over that set, but the set itself is not always the same.</li>
+</ol>
+<h2 id="how-it-works">How it works</h2>
+<p>For every job, one can work out a value <code>rating[job]</code> by calculating the largest difference <code>scores[job][person] - skill[person]</code>. Thus always</p>
+<pre><code>scores[job][person] &lt;= skill[person] + rating[job]</code></pre>
+<p>(If you add that up over a complete {job,person} assignment, the left side is the total score and the right side is always the same: the total skill plus the total rating. That's where the bound comes from.)</p>
+<p>We say that a person is competent to do a job if</p>
+<pre><code>scores[job][person] == skill[person] + rating[job]</code></pre>
+<p>(If you add up an assignment involving only competent persons, the total<br />equals the bound, and hence cannot be improved.)</p>
+<p>The algorithm assigns the jobs one by one, making sure that all jobs are done by competent persons. That way the assignment is always maximal, even when incomplete. Once a person has a job, that person is never fired, but may be moved to a different job.</p>
+<p>At the start, <code>task</code> and <code>skill</code> are empty.</p>
+<ol style="list-style-type: decimal">
+<li>If the best person (i.e. the person determining the rating) on the<br /> shortlist for the new job is unemployed, the job is assigned to that person and we move on to the next job.</li>
+<li>If the best person already has a job, it gets complicated. The shortlist for that job is also examined, maybe other shortlists too. The question &quot;If something is added to some of the current skill scores making the corresponding ratings go lower, which person would then be best?&quot; is asked all the time. Sooner or later, we either find a way of rescheduling some of the jobs so that an unemployed person is best for one of the previously assigned jobs, or discover a subset of jobs whose combined shortlists do not contain enough persons. If successful, the skill scores are updated accordingly; if unsuccessful, the job is skipped.</li>
+<li>When the last job has been assigned or skipped, we are done.</li>
+</ol>
+<p>The algorithm is a streamlined version of the [Hungarian algorithm] (<a href="http://en.wikipedia.org/wiki/Hungarian_algorithm">http://en.wikipedia.org/wiki/Hungarian_algorithm</a>), the main differences being:</p>
+<ul>
+<li>the matrix may have more rows than columns;</li>
+<li>the columns of the matrix are (thanks to Lua's table type) kept as sparse vectors;</li>
+<li>the matrix itself is never updated, a vector of row corrections being updated instead (column corrections are implicit);</li>
+<li>the solution process adds one column at a time, so that the partial solution is optimal on the partial matrix;</li>
+<li>employment and/or performance is maximized instead of salaries being minimized (keeping both management and trade unions happy).</li>
+</ul>
+<p>-</p>

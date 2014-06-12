@@ -22,9 +22,9 @@
 
 local count = function (task) 
    local len = 0
-   for k in pairs(task) do len = len + 1 end
+   for k in next,task do len = len + 1 end
    return len
-end;
+end
 
 local evaluate = function (task, scores, skill)
    if type(scores)~='table' then return false,
@@ -34,7 +34,7 @@ local evaluate = function (task, scores, skill)
    skill = skill or {}
    local roster = {}
    local total, bound = 0, 0  
-   for person,job in pairs(task) do 
+   for person,job in next,task do 
       local item = scores[job][person]
       if type(item)~='number' then return false, 
          ("'%s' is not shortlisted for job '%s'"):format(job)
@@ -45,13 +45,13 @@ local evaluate = function (task, scores, skill)
       end
       total = total + item
    end
-   for person, item in pairs(skill) do
+   for person, item in next,skill do
       if item>0 and not task[person] then return false,
          ("'%s' has a positive skill score but no job"):format(person)
       end
       bound = bound + item
    end
-   for job,shortlist in pairs(scores) do  
+   for job,shortlist in next,scores do  
       local rating
       if type(shortlist)~='table' then return false,
          ("bad value for scores[%s]: expected table, got "..type(shortlist)):
@@ -60,7 +60,7 @@ local evaluate = function (task, scores, skill)
       if not next(shortlist) then return false,
          ("the shortlist for job '%s' is empty"):format(job)
       end
-      for person,item in pairs(shortlist) do
+      for person,item in next,shortlist do
          if type(item)~='number' then return false,
             ("bad value for item[%s][%s]: expected number, got "..
               type(item)):format(job,person,type(item))
@@ -71,14 +71,17 @@ local evaluate = function (task, scores, skill)
       bound = bound + rating
    end
    return total, bound 
-end;
+end
 
-local assign = function(scores,option)   
+local assign = function(scores,option)
    local total, bound = evaluate({},scores) -- check input
    if total~=0 then error(bound) end
-   local skill, task = {}, {}
+   local skill, task= {}, {}
    local bottom = -bound-1
    if count(scores) == 0 then goto done end
+   for _,shortlist in next,scores do for person in next,shortlist do
+      skill[person] = 0
+   end end
    if option ~= "partial" then
       local low
       if option == "employ" then low = -bound-1
@@ -88,18 +91,15 @@ local assign = function(scores,option)
       elseif option then return nil, 
          ("bad option '%s' to 'assign'"):format(tostring(option))
       end 
-      local people = {}
-      for _,shortlist in pairs(scores) do for person in pairs(shortlist) do
-         people[person] = true
-      end end
-      if count(scores)>count(people) then return nil,
-            "complete assignment impossible: more jobs than persons"
+      if count(scores)>count(skill) then return nil,
+            ("complete assignment impossible: %d jobs but only %d persons"):
+            format(count(scores),count(skill))
       else goto main
       end
       local W = {}   -- calculate augmented scores
-      for job, shortlist in pairs(scores) do
+      for job, shortlist in next,scores do
          local s = {}
-         for person,item in pairs(people) do 
+         for person,item in next,skill do 
             s[person] = shortlist[person] or low
          end
          W[job] = s
@@ -108,31 +108,31 @@ local assign = function(scores,option)
    end
 ::main::
    assert(bottom<bottom+1,"numerical problem: Inf, NaN or precision loss")
-   for job, shortlist in pairs(scores) do  -- main loop
+   for job, shortlist in next,scores do  -- main loop
       local best
       local rating = bottom 
       local buddy, score, seen = {}, {}, {}
-      for person, item in pairs(shortlist) do -- find the first best
+      for person, item in next,shortlist do -- find the first best
          score[person] = item
-         item = item - (skill[person] or 0)
+         item = item - skill[person]
          if item>rating then 
             rating = item; best = person 
          end
       end
       while task[best] do -- until `best` is unemployed 
          seen[best]=true; rating = bottom 
-         local shortlist = scores[task[best]]
+         shortlist = scores[task[best]]
          local delta = score[best] - shortlist[best]
          local nextbest
-         for person in pairs(score) do if not seen[person] then
-             local nu = shortlist[person] + delta   
-             if nu > score[person] then
-                score[person] = nu; buddy[person] = best    
-             end
-             nu = score[person] - (skill[person] or 0)
-             if nu>rating then
-                rating = nu; nextbest = person
-             end
+         for person,ability in next,shortlist do if not seen[person] then
+            local nu = ability + delta 
+            if not score[person] or nu > score[person] then 
+               score[person], buddy[person] = nu, best    
+            end 
+         end end
+         for person,utility in next,score do if not seen[person] then
+            local nu = utility - skill[person]
+            if nu>rating then rating, nextbest = nu, person end
          end end
          best = nextbest   
          if not best then 
@@ -143,7 +143,7 @@ local assign = function(scores,option)
          end   
       end
 -- recompute skill and reassign task
-      for person in pairs(seen) do skill[person] = score[person] - rating end
+      for person in next,seen do skill[person] = score[person] - rating end
       while true do 
          local nextbest = buddy[best] 
          if not nextbest then break end
