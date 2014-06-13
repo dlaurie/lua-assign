@@ -75,75 +75,77 @@ end
 
 local assign = function(scores,option)
    local total, bound = evaluate({},scores) -- check input
-   if total~=0 then error(bound) end
-   local skill, task= {}, {}
+   if total~=0 then return nil,bound end
    local bottom = -bound-1
-   if count(scores) == 0 then goto done end
+   local skill,task= {},{}
    for _,shortlist in next,scores do for person in next,shortlist do
       skill[person] = 0
    end end
-   if option ~= "partial" then
-      local low
-      if option == "employ" then low = -bound-1
-      elseif type(option)=="number" then 
-         low=option
-         if low <= bottom then bottom = low-1 end
-      elseif option then return nil, 
-         ("bad option '%s' to 'assign'"):format(tostring(option))
-      end 
-      if count(scores)>count(skill) then return nil,
-            ("complete assignment impossible: %d jobs but only %d persons"):
-            format(count(scores),count(skill))
-      else goto main
-      end
+   if count(scores) == 0 then goto done end
+   if option~="partial" and count(scores)>count(skill) then 
+      return nil,
+         ("complete assignment impossible: %d jobs but only %d persons"):
+         format(count(scores),count(skill))
+   end
+
+   if type(option)=="number" then 
+      if option <= bottom then bottom = option-1 end
+      option = "employ"
+   elseif option and option~="partial" then  
+      return nil,("bad option '%s' to 'assign'"):format(tostring(option))
+   end 
+   assert(bottom<bottom+1,"numerical problem: Inf, NaN or precision loss")
+
+   if option == "employ" then
       local W = {}   -- calculate augmented scores
       for job, shortlist in next,scores do
          local s = {}
          for person,item in next,skill do 
-            s[person] = shortlist[person] or low
+            s[person] = shortlist[person] or bottom+1
          end
          W[job] = s
       end
       scores = W
    end
-::main::
-   assert(bottom<bottom+1,"numerical problem: Inf, NaN or precision loss")
-   for job, shortlist in next,scores do  -- main loop
+
+---- main loop
+   for job, shortlist in next,scores do
       local best
       local rating = bottom 
       local buddy, score, seen = {}, {}, {}
-      for person, item in next,shortlist do -- find the first best
+      for person, item in next,shortlist do -- find the first `best`
          score[person] = item
          item = item - skill[person]
          if item>rating then 
             rating = item; best = person 
          end
       end
-      while task[best] do -- until `best` is unemployed 
-         seen[best]=true; rating = bottom 
+      while task[best] do  
+         seen[best]=true; margin = bottom 
          shortlist = scores[task[best]]
-         local delta = score[best] - shortlist[best]
+         local rating = score[best] - shortlist[best] 
          local nextbest
          for person,ability in next,shortlist do if not seen[person] then
-            local nu = ability + delta 
+            local nu = ability + rating
             if not score[person] or nu > score[person] then 
                score[person], buddy[person] = nu, best    
             end 
          end end
          for person,utility in next,score do if not seen[person] then
             local nu = utility - skill[person]
-            if nu>rating then rating, nextbest = nu, person end
+            if nu>margin then margin, nextbest = nu, person end
          end end
          best = nextbest   
          if not best then 
             if option=="partial" then goto continue
             else return nil,
-  "complete assignment impossible: found a subset with more jobs than persons"
+  "complete assignment impossible: found a subset with more jobs than persons",
+               task, job
             end 
          end   
       end
 -- recompute skill and reassign task
-      for person in next,seen do skill[person] = score[person] - rating end
+      for person in next,seen do skill[person] = score[person] - margin end
       while true do 
          local nextbest = buddy[best] 
          if not nextbest then break end

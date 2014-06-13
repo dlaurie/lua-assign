@@ -16,18 +16,25 @@ Usage:
 
     assign = require "lua-assign"
     task, skill = assign(scores[,option])
+    nil, msg[, task, job] = assign(scores[,option])
 
-`scores`: A table with pairs `job,shortlist`, where `shortlist` is a table with pairs `person,score`, and `score` is a number. Numbers should be such that no precision is lost in addition, e.g. integers not too close to overflowing.
+`scores`: A table with pairs `job,shortlist`, where `shortlist` is a table with pairs `person,score`, and `score` is a number. Numbers should be such that no precision is lost in addition, e.g. integers not too close to overflowing, or fractions with a smallish power of 2 as denominator. 
 
 `task`: A table with pairs `person,job` where `person` is a key in `scores[job]` and each key in `scores` appears as `job` exactly once. If such an assignment does not exist, `nil` is returned unless `option` is given. The total of `scores[job][person]` over the pairs in `task` is a maximum. The table `task` has a metatable, see below.
 
-`skill`: A table of numbers whose keys all appear in `task`, needed when calling `task`. If `task==nil`, `skill` is a message.
+`skill`: A table of numbers whose keys all appear in `task`, needed when calling `task`. 
+
+If the first return value is `nil`, an error message is returned. If it says something about a subset, the current `task` and the job that could not be added are the third and fourth return values.
 
 `option`:
 
 1.  `assign(scores,"partial")` returns the most complete partial assignment that could be found. The returned values are maximal over the jobs actually assigned, not over all choices of jobs.
-2.  `assign(scores,low)` means that every person who appears in any shortlist is treated as if on other shortlists too, with score `low`. The returned assignment may include pairs `person,job` for which `scores[job][person]` is nil.
-3.  `assign(scores,"employ")` acts like `assign(scores,low)`, but `low` is calculated such that as many jobs as possible are assigned. Unlike `assign(scores,"partial")`, the assignment is maximal over all assignments that assign that number of jobs. The downside is that `assign(scores,"employ")` fills up the shortlists. If the original shortlists are sparse, `assign(scores,"partial")` is much faster.
+2.  `assign(scores,low)` means that every person who appears in any shortlist is treated as if on other shortlists too, with score `low`. The returned assignment may include phony jobs, i.e. pairs `person,job` for which `scores[job][person]` is nil. The lower you make `low`, the fewer of these phony jobs appear.
+3.  `assign(scores,"employ")` acts like `assign(scores,low)`, but `low` is calculated to be low enough that as many genuine jobs as possible are assigned. This is similar to what `assign(scores,"partial")` does, except that:
+
+   - Every job appears to be assigned to somebody. You need to examine `scores[job][person]` yourself to find the phony jobs.
+   - The assignment is maximal over all ways to choose that number of jobs, whereas `partial` is only maximal over the set of jobs actually assigned.
+   - If the original shortlists are sparse, `assign(scores,"partial")` is faster.
 
 ### metamethods of `task`:
 
@@ -82,4 +89,19 @@ The algorithm is a streamlined version of the [Hungarian algorithm] ([http://en.
 -   the solution process adds one column at a time, so that the partial solution is optimal on the partial matrix;
 -   employment and/or performance is maximized instead of salaries being minimized (keeping both management and trade unions happy).
 
--
+Other applications
+------------------
+
+"Job" and "person" are of course only names for two kinds of stuff that you wish to pair off, having at least as many of the second as of the first.
+
+- If you have more jobs than people, treat a job as "person" and a person as "job".
+- If you wish to minimize rather than maximize, change the sign of the scores.
+- Mathematically, what we are maximizing is $\sum_k w(k,p_k)$ where $w$ is some function of two variables, over all possible permutations $p.$
+
+The assignment problem is a special case (supply and demand always one unit) of the transportation problem:
+
+> A certain commodity, measured in units, is available at depots and required by customers. For each depot/customer combination, the unit cost of shipping an item is known. Calculate the cheapest way of doing the full shipping job.
+
+If the numbers involved are fairly small, one can simply duplicate depots and customers.
+
+
