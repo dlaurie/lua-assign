@@ -74,7 +74,7 @@ equals the bound, and hence cannot be improved.)
 
 The algorithm assigns the jobs one by one, making sure that all jobs are done by competent persons. That way the assignment is always maximal, even when incomplete. Once a person has a job, that person is never fired, but may be moved to a different job.
 
-At the start, `task` and `skill` are empty.
+At the start, `task` is empty and `skill` is all zeros.
 
 1.  If the best person (i.e. the person determining the rating) on the
      shortlist for the new job is unemployed, the job is assigned to that person and we move on to the next job.
