@@ -51,7 +51,7 @@ If the first return value is `nil`, an error message is returned. If it says som
 The fine print
 --------------
 
-Several of the loops use `pairs`, and some things are therefore not reproducible over different runs with the same data.
+All table traversals use `next`, and some things are therefore not reproducible over different runs with the same data.
 
 1.  If the maximal assignment is not unique, any maximal assignment may be returned.
 2.  In the case of `assign(scores,"partial")`, the subset of jobs assigned is maximal in the sense that no jobs can be added to it without making the assignment impossible, and the total is maximal over that set, but the set itself is not always the same.
@@ -63,7 +63,7 @@ For every job, one can work out a value `rating[job]` by calculating the largest
 
     scores[job][person] <= skill[person] + rating[job]
 
-(If you add that up over a complete {job,person} assignment, the left side is the total score and the right side is always the same: the total skill plus the total rating. That's where the bound comes from.)
+If you add that up over a complete {job,person} assignment, the left side is the total score and the right side is always the same: the total skill plus the total rating. That's where the bound comes from.
 
 We say that a person is competent to do a job if
 
@@ -81,13 +81,13 @@ At the start, `task` and `skill` are empty.
 2.  If the best person already has a job, it gets complicated. The shortlist for that job is also examined, maybe other shortlists too. The question "If something is added to some of the current skill scores making the corresponding ratings go lower, which person would then be best?" is asked all the time. Sooner or later, we either find a way of rescheduling some of the jobs so that an unemployed person is best for one of the previously assigned jobs, or discover a subset of jobs whose combined shortlists do not contain enough persons. If successful, the skill scores are updated accordingly; if unsuccessful, the job is skipped.
 3.  When the last job has been assigned or skipped, we are done.
 
-The algorithm is a streamlined version of the [Hungarian algorithm] ([http://en.wikipedia.org/wiki/Hungarian\_algorithm](http://en.wikipedia.org/wiki/Hungarian_algorithm)), the main differences being:
+The algorithm is a streamlined version of the [Hungarian algorithm]([http://en.wikipedia.org/wiki/Hungarian\_algorithm](http://en.wikipedia.org/wiki/Hungarian_algorithm)), the main differences being:
 
 -   the matrix may have more rows than columns;
 -   the columns of the matrix are (thanks to Lua's table type) kept as sparse vectors;
 -   the matrix itself is never updated, a vector of row corrections being updated instead (column corrections are implicit);
 -   the solution process adds one column at a time, so that the partial solution is optimal on the partial matrix;
--   employment and/or performance is maximized instead of salaries being minimized (keeping both management and trade unions happy).
+-   employment and/or performance is maximized instead of salaries being minimized.
 
 Other applications
 ------------------
@@ -102,6 +102,6 @@ The assignment problem is a special case (supply and demand always one unit) of 
 
 > A certain commodity, measured in units, is available at depots and required by customers. For each depot/customer combination, the unit cost of shipping an item is known. Calculate the cheapest way of doing the full shipping job.
 
-If the numbers involved are fairly small, one can simply duplicate depots and customers.
+If the numbers involved are fairly small, one can use `lua-assign` to solve the transportation problem by simply duplicating depots and customers.
 
 
