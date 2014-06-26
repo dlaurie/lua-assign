@@ -81,7 +81,7 @@ At the start, `task` is empty and `skill` is all zeros.
 2.  If the best person already has a job, it gets complicated. The shortlist for that job is also examined, maybe other shortlists too. The question "If something is added to some of the current skill scores making the corresponding ratings go lower, which person would then be best?" is asked all the time. Sooner or later, we either find a way of rescheduling some of the jobs so that an unemployed person is best for one of the previously assigned jobs, or discover a subset of jobs whose combined shortlists do not contain enough persons. If successful, the skill scores are updated accordingly; if unsuccessful, the job is skipped.
 3.  When the last job has been assigned or skipped, we are done.
 
-The algorithm is a streamlined version of the [Hungarian algorithm]([http://en.wikipedia.org/wiki/Hungarian\_algorithm](http://en.wikipedia.org/wiki/Hungarian_algorithm)), the main differences being:
+The algorithm is a streamlined version of the Hungarian algorithm (http://en.wikipedia.org/wiki/Hungarian\_algorithm), the main differences being:
 
 -   the matrix may have more rows than columns;
 -   the columns of the matrix are (thanks to Lua's table type) kept as sparse vectors;

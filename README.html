@@ -50,7 +50,7 @@ total, bound = evaluate(task,scores,skill)</code></pre>
 <li>If the best person already has a job, it gets complicated. The shortlist for that job is also examined, maybe other shortlists too. The question &quot;If something is added to some of the current skill scores making the corresponding ratings go lower, which person would then be best?&quot; is asked all the time. Sooner or later, we either find a way of rescheduling some of the jobs so that an unemployed person is best for one of the previously assigned jobs, or discover a subset of jobs whose combined shortlists do not contain enough persons. If successful, the skill scores are updated accordingly; if unsuccessful, the job is skipped.<br /></li>
 <li>When the last job has been assigned or skipped, we are done.</li>
 </ol>
-<p>The algorithm is a streamlined version of the <a href="[http://en.wikipedia.org/wiki/Hungarian_algorithm](http://en.wikipedia.org/wiki/Hungarian_algorithm)">Hungarian algorithm</a>, the main differences being:</p>
+<p>The algorithm is a streamlined version of the Hungarian algorithm (<a href="http://en.wikipedia.org/wiki/Hungarian\_algorithm">http://en.wikipedia.org/wiki/Hungarian\_algorithm</a>), the main differences being:</p>
 <ul>
 <li>the matrix may have more rows than columns;<br /></li>
 <li>the columns of the matrix are (thanks to Lua's table type) kept as sparse vectors;<br /></li>
